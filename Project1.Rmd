@@ -1,0 +1,45 @@
+---
+title: "Project1"
+author: "LeTicia Cancel"
+date: "9/18/2020"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+# Libraries
+#library(tidyverse)
+library(RCurl)
+```
+
+Import tournament info from GitHub
+```{r}
+site <- getURL("https://raw.githubusercontent.com/ltcancel/Project1_Data607_F20/master/tounamentinfo.txt")
+df <- read.delim(text = site, header = TRUE,sep = "|", comment.char = "-")
+
+t_df <- as_tibble(df)
+t_df
+
+df_filter <- 
+  
+t_df %>% 
+  filter(is.na(Total))
+
+df_filter
+
+df_filter <- df_filter %>%
+  select(Pair, Player.Name)
+
+df_filter[!1:]
+
+?read.delim
+```
+
