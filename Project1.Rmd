@@ -18,27 +18,40 @@ knitr::opts_chunk$set(echo = TRUE)
 # Libraries
 #library(tidyverse)
 library(RCurl)
+library(dplyr)
 ```
 
 Import tournament info from GitHub
 ```{r}
 site <- getURL("https://raw.githubusercontent.com/ltcancel/Project1_Data607_F20/master/tounamentinfo.txt")
-df <- read.delim(text = site, header = TRUE,sep = "|", comment.char = "-")
+df <- read.delim(text = site, header = FALSE,sep = "|")
 
 t_df <- as_tibble(df)
+
 t_df
-
-df_filter <- 
-  
-t_df %>% 
-  filter(is.na(Total))
-
 df_filter
 
-df_filter <- df_filter %>%
-  select(Pair, Player.Name)
+colnames(t_df) <- cnames
 
-df_filter[!1:]
+cnames <- c('Pair','PlayerName','TotalPts','Round1','Round2','Round3','Round4','Round5','Round6','Round7')
+
+t_df
+
+
+#get all rows with the pair number and player name
+df_filter1 <- t_df %>%
+  filter(str_detect(Pair, regex("\\d"))) %>%
+  filter(!str_detect(str_to_lower(TotalPts), "n"))
+
+#get all rows that include the other player information
+df_filter2 <- t_df %>%
+  filter(str_detect(str_to_lower(Pair), "o|m")) %>%
+  filter(str_detect(str_to_lower(TotalPts), "n"))
+
+#combine both to make a final table
+df_filter1
+df_filter2
+
 
 ?read.delim
 ```
