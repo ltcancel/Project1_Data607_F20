@@ -19,6 +19,8 @@ knitr::opts_chunk$set(echo = TRUE)
 #library(tidyverse)
 library(RCurl)
 library(dplyr)
+library(stringr)
+library(tidyr)
 ```
 
 Import tournament info from GitHub
@@ -46,13 +48,95 @@ df_filter1 <- t_df %>%
 #get all rows that include the other player information
 df_filter2 <- t_df %>%
   filter(str_detect(str_to_lower(Pair), "o|m")) %>%
-  filter(str_detect(str_to_lower(TotalPts), "n"))
+  filter(!str_detect(str_to_lower(TotalPts), "p"))
 
 #combine both to make a final table
 df_filter1
 df_filter2
 
+df_combined <- cbind(df_filter1, df_filter2[,1:2])
+df_combined
 
-?read.delim
+cnames <- c("Playernum","PlayerName","TotalPts",'Round1','Round2','Round3','Round4','Round5','Round6','Round7','State','ratings')
+
+#rename columns again
+colnames(df_combined) <- cnames
+
+df_combined
+
+#Separate column that holds pre and post ratings
+df_combined <- df_combined %>%
+  separate(ratings, c("drop", "keep"), ": ")
+
+df_combined <- df_combined %>%
+  separate(keep, c("Pre-Rating", "Post-Rating"), "->")
+
+df_combined <- df_combined %>%
+  separate(`Pre-Rating`, c("Pre-Rating", "drop2"), "P")
+
+df_combined
+df_combined <- df_combined %>%
+  select(1:11,13,15)
+
+df_combined
+
+#split round 1
+df_combined <- df_combined %>%
+  separate(Round1, c("R1WL","R1Player"))
+
+#split round 2
+df_combined <- df_combined %>%
+  separate(Round2,c("R2WL","R2Player"))
+
+#split round 3
+df_combined <- df_combined %>%
+  separate(Round3,c("R3WL","R3Player"))
+
+#split round 4
+df_combined <- df_combined %>%
+  separate(Round4,c("R4WL","R4Player"))
+
+#split round 5
+df_combined <- df_combined %>%
+  separate(Round5,c("R5WL","R5Player"))
+
+#split round 6
+df_combined <- df_combined %>%
+  separate(Round6,c("R6WL","R6Player"))
+
+#split round 7
+df_combined <- df_combined %>%
+  separate(Round7,c("R7WL","R7Player"))
+
+
+#players and their pre-ratngs
+ratings <- df_combined %>%
+  select(Playernum, `Pre-Rating`)
+
+df_combined
+ratings
+
+class(ratings)
+
+#convert data type so it can be matched
+ratings$Playernum <- as.integer(ratings$Playernum)
+df_combined$R1Player <- as.integer(df_combined$R1Player)
+
+
+
+
+colnames(ratings) <- c("num", "Pre-Rating")
+
+full_join(df_combined, ratings, by = c("R2Player" = "num"))
+
+merge(df_combined, ratings, by.x = "R1Player", by.y = "Playernum")
+
+
+?merge
+#get average opponents pre-rating
+
+
+
+
 ```
 
