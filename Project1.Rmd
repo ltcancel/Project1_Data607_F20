@@ -23,23 +23,28 @@ library(stringr)
 library(tidyr)
 ```
 
-Import tournament info from GitHub
+## Import Tournament Data
+
+The tournament text file is saved in GitHub. The data is saved to the table t_df and the columns are renamed.
 ```{r}
+#get URL and import data from GitHub
 site <- getURL("https://raw.githubusercontent.com/ltcancel/Project1_Data607_F20/master/tounamentinfo.txt")
 df <- read.delim(text = site, header = FALSE,sep = "|")
 
+#create a tibble with the imported data
 t_df <- as_tibble(df)
 
-t_df
-df_filter
-
+#rename columns
+cnames <- c('Pair','PlayerName','TotalPts','Round1','Round2','Round3','Round4','Round5','Round6','Round7','drop')
 colnames(t_df) <- cnames
 
-cnames <- c('Pair','PlayerName','TotalPts','Round1','Round2','Round3','Round4','Round5','Round6','Round7')
+head(t_df)
+```
 
-t_df
+## Data Cleanup
 
-
+After the data is saved to a table we need to remove all unnecessary information. 
+```{r}
 #get all rows with the pair number and player name
 df_filter1 <- t_df %>%
   filter(str_detect(Pair, regex("\\d"))) %>%
@@ -50,20 +55,20 @@ df_filter2 <- t_df %>%
   filter(str_detect(str_to_lower(Pair), "o|m")) %>%
   filter(!str_detect(str_to_lower(TotalPts), "p"))
 
-#combine both to make a final table
-df_filter1
-df_filter2
-
-df_combined <- cbind(df_filter1, df_filter2[,1:2])
-df_combined
+#combine both tables
+df_combined <- cbind(df_filter1[,1:10], df_filter2[,1:2])
 
 cnames <- c("Playernum","PlayerName","TotalPts",'Round1','Round2','Round3','Round4','Round5','Round6','Round7','State','ratings')
 
 #rename columns again
 colnames(df_combined) <- cnames
 
-df_combined
+head(df_combined)
 
+```
+
+Some columns contain multiple types of information, so those will need to be split into their own columns.
+```{r warning=FALSE}
 #Separate column that holds pre and post ratings
 df_combined <- df_combined %>%
   separate(ratings, c("drop", "keep"), ": ")
@@ -74,12 +79,14 @@ df_combined <- df_combined %>%
 df_combined <- df_combined %>%
   separate(`Pre-Rating`, c("Pre-Rating", "drop2"), "P")
 
-df_combined
+#select only the columns needed after splitting the data
 df_combined <- df_combined %>%
   select(1:11,13,15)
 
-df_combined
-
+head(df_combined)
+```
+Additional splitting is needed for the columns that hold the player number of each of their opponents.
+```{r}
 #split round 1
 df_combined <- df_combined %>%
   separate(Round1, c("R1WL","R1Player"))
@@ -108,35 +115,73 @@ df_combined <- df_combined %>%
 df_combined <- df_combined %>%
   separate(Round7,c("R7WL","R7Player"))
 
+#Select only the columns needed after spliting the data
+df_combined <- df_combined %>%
+  select(1:3,5,7,9,11,13,15,17:19)
 
-#players and their pre-ratngs
+head(df_combined)
+```
+
+## Computing Averages
+
+Here we need to do some additional work to get the average of all opponent's pre-rating.
+```{r}
+#Create a new table that only holds the player number and their pre-ratings
 ratings <- df_combined %>%
   select(Playernum, `Pre-Rating`)
 
-df_combined
-ratings
+head(ratings)
+```
 
-class(ratings)
-
-#convert data type so it can be matched
+When I tried to compute the average for each row I realized that it was not working because the columns needed for the equation were all stored as "chr" data types. Here I convert all columns needed for joining and computing to an integer.
+```{r}
+#convert data to an integer so it can be matched
 ratings$Playernum <- as.integer(ratings$Playernum)
-df_combined$R1Player <- as.integer(df_combined$R1Player)
+
+#loop through the main table to convert all player number columns into an int
+for(i in 4:10){
+  df_combined[,i] <- as.integer(df_combined[,i])
+}
+
+#join the ratings table and the df_combined table so we can see the pre-rating of each opponent
+df_combined <- df_combined %>%
+  inner_join(ratings, by = c("R1Player" = "Playernum")) %>%
+  inner_join(ratings, by = c("R2Player" = "Playernum")) %>%
+  inner_join(ratings, by = c("R3Player" = "Playernum")) %>%
+  inner_join(ratings, by = c("R4Player" = "Playernum")) %>%
+  inner_join(ratings, by = c("R5Player" = "Playernum")) %>%
+  inner_join(ratings, by = c("R6Player" = "Playernum")) %>%
+  inner_join(ratings, by = c("R7Player" = "Playernum"))
+
+#convert new columns added from the join above to an integer so they can be averaged
+for(i in 12:19){
+  df_combined[,i] <- as.integer(df_combined[,i])
+}
 
 
+#compute the average of the pre-ratings for each row
+df_combined <- mutate(df_combined, (rowSums(df_combined[,12:19], na.rm = TRUE))/7)
 
+head(df_combined)
+```
 
-colnames(ratings) <- c("num", "Pre-Rating")
+## Export to CSV
 
-full_join(df_combined, ratings, by = c("R2Player" = "num"))
+Now we create the final table and export it to a csv file.
+```{r}
+#create the final tables only using the columns that need to be exported
+final_table <- df_combined %>%
+  select(2,3,11,12,20)
 
-merge(df_combined, ratings, by.x = "R1Player", by.y = "Playernum")
+#remane final table
+names <- c("PlayerName", "TotalPts", "State", "Pre-Rating", "OppAvgRating")
+colnames(final_table) <- names
 
+head(final_table)
+```
 
-?merge
-#get average opponents pre-rating
-
-
-
-
+```{r}
+#write to a csv file
+write.csv(final_table,"FinalData.csv")
 ```
 
